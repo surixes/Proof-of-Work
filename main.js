@@ -19,6 +19,29 @@ class Block {
     this.nonce = nonce;
   }
 }
+
+class MatrixPow {
+  static createMatrix(hash) {
+    const size = Math.floor(Math.sqrt(hash.length));
+    let m = [], idx = 0;
+    for (let i = 0; i < size; i++) {
+      m[i] = [];
+      for (let j = 0; j < size; j++) {
+        m[i][j] = hash.charCodeAt(idx++) % 2;
+      }
+    }
+    return m;
+  }
+
+  static checkMatrixPattern(matrix, difficulty) {
+    let main = 0, anti = 0, n = matrix.length;
+    for (let i = 0; i < n; i++) {
+      main += matrix[i][i]; 
+      anti += matrix[i][n - 1 - i];
+    }
+    return main === anti && main >= difficulty;
+  }
+}
   
 var sockets = [];
 var MessageType = {
@@ -42,6 +65,7 @@ var initHttpServer = () => {
     var newBlock = mineBlock(req.body.data);
     addBlock(newBlock);
     broadcast(responseLatestMsg());
+    //console.log(`block added: Nonce: ${newBlock.nonce} Index: ${newBlock.index} Hash: ${newBlock.hash} `);
     console.log('block added: ' + JSON.stringify(newBlock));
     res.send();
   });
@@ -61,15 +85,21 @@ var mineBlock = (blockData) => {
   var nonce = 0;
   var nextTimestamp = new Date().getTime() / 1000;
   var nextHash = calculateHash(nextIndex, previousBlock.hash, nextTimestamp, blockData, nonce);
-  while (nextHash.substring(0, difficulty) !== Array(difficulty + 1).join("0")){
+  var matrix;
+
+  console.log(`Start mining block with index: ${nextIndex}`);
+
+  while (nextHash.substring(0, difficulty) !== Array(difficulty + 1).join("0") || 
+         !MatrixPow.checkMatrixPattern(MatrixPow.createMatrix(nextHash), difficulty)) {
     nonce++;
     nextTimestamp = new Date().getTime() / 1000;
-    nextHash = calculateHash(nextIndex, previousBlock.hash, nextTimestamp, blockData, nonce)
-    console.log("\"index\":" + nextIndex + ",\"previousHash\":"+previousBlock.hash+
-    "\"timestamp\":"+nextTimestamp+",\"data\":"+blockData+
-    ",\x1b[33mhash: " + nextHash + " \x1b[0m," + "\"difficulty\":"+difficulty+
-    " \x1b[33mnonce: " + nonce + " \x1b[0m ");
+    nextHash = calculateHash(nextIndex, previousBlock.hash, nextTimestamp, blockData, nonce);
+    matrix = MatrixPow.createMatrix(nextHash);
+    console.log(`Trying nonce=${nonce} with hash: ${nextHash}`);
   }
+
+  console.log(`Mined block with index: ${nextIndex}, nonce=${nonce} and hash: ${nextHash}`);
+
   return new Block(nextIndex, previousBlock.hash, nextTimestamp, blockData, nextHash, difficulty, nonce);
 }
   
@@ -144,14 +174,6 @@ var handleBlockchainResponse = (message) => {
     console.log('received blockchain is not longer than current blockchain. Do nothing');
   }
 };
-  
-var generateNextBlock = (blockData) => {
-  var previousBlock = getLatestBlock();
-  var nextIndex = previousBlock.index + 1;
-  var nextTimestamp = new Date().getTime() / 1000;
-  var nextHash = calculateHash(nextIndex, previousBlock.hash, nextTimestamp, blockData);
-  return new Block(nextIndex, previousBlock.hash, nextTimestamp, blockData, nextHash);
-};
 
 var calculateHashForBlock = (block) => {
   return calculateHash(block.index, block.previousHash, block.timestamp, block.data, block.nonce);
@@ -179,6 +201,13 @@ var isValidNewBlock = (newBlock, previousBlock) => {
     console.log('invalid hash: ' + calculateHashForBlock(newBlock) + ' ' + newBlock.hash);
     return false;
   }
+
+  const matrix = MatrixPow.createMatrix(newBlock.hash);
+  if (!MatrixPow.checkMatrixPattern(matrix, newBlock.difficulty)) {
+    console.log('invalid matrix pattern');
+    return false;
+  }
+
   return true;
 };
   

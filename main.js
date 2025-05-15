@@ -24,11 +24,15 @@ class MatrixPow {
   static createMatrix(hash) {
     const size = Math.floor(Math.sqrt(hash.length));
     let m = [], idx = 0;
+    //console.log('Размер матрицы:', size);  // Логируем размер матрицы
     for (let i = 0; i < size; i++) {
-      m[i] = [];
-      for (let j = 0; j < size; j++) {
-        m[i][j] = hash.charCodeAt(idx++) % 2;
-      }
+        m[i] = [];
+        for (let j = 0; j < size; j++) {
+            const charCode = hash.charCodeAt(idx++);
+            const value = charCode % 2;
+            //console.log(`Индекс: ${idx-1}, Символ: '${hash[idx-1]}', Код: ${charCode}, Значение: ${value}`);
+            m[i][j] = value;
+        }
     }
     return m;
   }
@@ -42,7 +46,67 @@ class MatrixPow {
     return main === anti && main >= difficulty;
   }
 }
-  
+
+function displayMatrix(matrix) {
+  const table = document.getElementById("matrix");
+  table.innerHTML = "";
+  matrix.forEach(row => {
+      const tr = document.createElement("tr");
+      row.forEach(cell => {
+          const td = document.createElement("td");
+          td.textContent = cell;
+          tr.appendChild(td);
+      });
+      table.appendChild(tr);
+  });
+}
+
+function checkDiagonals(matrix) {
+  let mainDiagonalSum = 0;
+  let secondaryDiagonalSum = 0;
+  const size = matrix.length;
+
+  for (let i = 0; i < size; i++) {
+      mainDiagonalSum += matrix[i][i];
+      secondaryDiagonalSum += matrix[i][size - i - 1];
+  }
+
+  return { mainDiagonalSum, secondaryDiagonalSum };
+}
+
+function checkHash(hash, targetMatrix) {
+  const matrix = createMatrix(hash);
+  console.log(`Проверка хеша: '${hash}'`);
+
+  console.log("Преобразование символов в матрицу:");
+  let idx = 0;
+  for (let i = 0; i < matrix.length; i++) {
+      let row = '';
+      for (let j = 0; j < matrix[i].length; j++) {
+          const charCode = hash.charCodeAt(idx++);
+          const value = charCode % 2;
+          row += `$({String.fromCharCode(charCode)} (${charCode} -> ${value})` ;
+      }
+      console.log(`Строка ${i + 1}: ${row}`);
+  }
+
+  console.log("Полученная матрица:");
+  displayMatrix(matrix);
+
+  const { mainDiagonalSum, secondaryDiagonalSum } = checkDiagonals(matrix);
+  console.log(`Сумма главной диагонали: ${mainDiagonalSum}`);
+  console.log(`Сумма побочной диагонали: ${secondaryDiagonalSum}`);
+
+  const isMatch = JSON.stringify(matrix) === JSON.stringify(targetMatrix);
+  if (isMatch) {
+    console.log(`Найден подходящий хеш: '${hash}'`);
+      return true;
+  } else {
+    console.log(`Хеш '${hash}' не подходит.`);
+      return false;
+  }
+}
+
 var sockets = [];
 var MessageType = {
   QUERY_LATEST: 0,
@@ -99,6 +163,7 @@ var mineBlock = (blockData) => {
   }
 
   console.log(`Mined block with index: ${nextIndex}, nonce=${nonce} and hash: ${nextHash}`);
+  checkHash(nextHash, MatrixPow.createMatrix(nextHash));
 
   return new Block(nextIndex, previousBlock.hash, nextTimestamp, blockData, nextHash, difficulty, nonce);
 }

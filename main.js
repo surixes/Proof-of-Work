@@ -48,16 +48,9 @@ class MatrixPow {
 }
 
 function displayMatrix(matrix) {
-  const table = document.getElementById("matrix");
-  table.innerHTML = "";
+  console.log("Матрица:");
   matrix.forEach(row => {
-      const tr = document.createElement("tr");
-      row.forEach(cell => {
-          const td = document.createElement("td");
-          td.textContent = cell;
-          tr.appendChild(td);
-      });
-      table.appendChild(tr);
+    console.log("| " + row.join(" | ") + " |");
   });
 }
 
@@ -75,36 +68,30 @@ function checkDiagonals(matrix) {
 }
 
 function checkHash(hash, targetMatrix) {
-  const matrix = createMatrix(hash);
+  const matrix = MatrixPow.createMatrix(hash);
   console.log(`Проверка хеша: '${hash}'`);
 
-  console.log("Преобразование символов в матрицу:");
+  console.log("\nПреобразование символов в матрицу:");
   let idx = 0;
   for (let i = 0; i < matrix.length; i++) {
-      let row = '';
-      for (let j = 0; j < matrix[i].length; j++) {
-          const charCode = hash.charCodeAt(idx++);
-          const value = charCode % 2;
-          row += `$({String.fromCharCode(charCode)} (${charCode} -> ${value})` ;
-      }
-      console.log(`Строка ${i + 1}: ${row}`);
+    let rowLog = "";
+    for (let j = 0; j < matrix[i].length; j++) {
+      const charCode = hash.charCodeAt(idx++);
+      const value = charCode % 2;
+      rowLog += `${String.fromCharCode(charCode)} (${charCode} → ${value}) | `;
+    }
+    console.log(`Строка ${i + 1}: ${rowLog}`);
   }
 
-  console.log("Полученная матрица:");
   displayMatrix(matrix);
 
   const { mainDiagonalSum, secondaryDiagonalSum } = checkDiagonals(matrix);
-  console.log(`Сумма главной диагонали: ${mainDiagonalSum}`);
+  console.log(`\nСумма главной диагонали: ${mainDiagonalSum}`);
   console.log(`Сумма побочной диагонали: ${secondaryDiagonalSum}`);
 
   const isMatch = JSON.stringify(matrix) === JSON.stringify(targetMatrix);
-  if (isMatch) {
-    console.log(`Найден подходящий хеш: '${hash}'`);
-      return true;
-  } else {
-    console.log(`Хеш '${hash}' не подходит.`);
-      return false;
-  }
+  console.log(isMatch ? "Хеш подходит!" : "Хеш не подходит.");
+  return isMatch;
 }
 
 var sockets = [];
@@ -318,3 +305,7 @@ var broadcast = (message) => sockets.forEach(socket => write(socket, message));
 connectToPeers(initialPeers);
 initHttpServer();
 initP2PServer();
+
+//ipconfig
+//$env:HTTP_PORT=3001; $env:P2P_PORT=6001; npm start
+//$env:HTTP_PORT=3002; $env:P2P_PORT=6002; $env:PEERS="ws://172.17.80.1:6001"; npm start
